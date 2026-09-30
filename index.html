@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Umalytics</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#09101a;--panel:#101927;--panel2:#142032;--panel3:#0c1420;
+  --text:#edf4ff;--muted:#95a6c0;--line:#27364d;--accent:#79a9ff;
+  --accent2:#b198ff;--good:#77d5a0;--warn:#f2c76b;--danger:#ff929d;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI","Yu Gothic UI","Meiryo",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+.app{display:grid;grid-template-columns:292px minmax(0,1fr) 390px;height:100vh}
+.sidebar,.inspector{background:var(--panel);overflow:auto}
+.sidebar{border-right:1px solid var(--line);padding:15px}
+.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+main{position:relative;min-width:0;overflow:hidden}
+h1{font-size:18px;margin:0 0 4px} h2{font-size:14px;margin:0 0 9px}
+.sub,.tiny,.note{color:var(--muted);line-height:1.55}.sub{font-size:11px}.tiny{font-size:10px}.note{font-size:10px}
+.version{font-size:9px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:2px}
+.section{margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
+label{display:block;font-size:11px;margin:8px 0 4px;color:#d4def0}
+select,input[type=text],textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel3);color:var(--text);outline:none;font:inherit;font-size:11px}
+textarea{min-height:68px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--accent)}
+button{width:100%;padding:7px 9px;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:#182437;color:var(--text);cursor:pointer;font:inherit;font-size:11px}
+button:hover{background:#21304a}.secondary{background:transparent}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.status{padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel3);font-size:10px;line-height:1.5;color:var(--muted)}
+.status.ok{border-color:#275744;color:#9ce4bb}.status.err{border-color:#6b3640;color:#ffb0b8}
+.value{color:var(--accent);font-variant-numeric:tabular-nums}
+.check{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;color:#d4def0}.check input{margin:0}
+details{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-size:12px;font-weight:700;color:#dce8fb;user-select:none}
+details[open] summary{margin-bottom:7px}
+.viewTabs{position:absolute;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:11px;background:rgba(9,16,26,.88);backdrop-filter:blur(10px)}
+.viewTabs button{width:auto;margin:0;background:transparent;padding:7px 12px;font-size:10px}
+.viewTabs button.active{background:#1e304b;border-color:#466b9c}
+.view{position:absolute;inset:0;display:none}.view.active{display:block}
+#affinityNetwork,#hyperNetwork{position:absolute;inset:0}
+#affinityNetwork{transition:opacity .18s ease}
+#chordSvg{position:absolute;inset:0;width:100%;height:100%}
+.graphInfo{position:absolute;top:12px;left:12px;z-index:18;width:min(330px,42%);max-height:140px;overflow:auto;padding:9px 10px;border:1px solid #365071;border-radius:10px;background:rgba(10,18,29,.94);backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.28);font-size:10px;line-height:1.5;display:none;pointer-events:none}
+.graphInfo.show{display:block}
+.graphInfo .title{font-size:12px;font-weight:700;color:#f2f6ff;margin-bottom:3px}
+.graphInfo .meta{color:var(--muted)}
+.graphInfo .strong{color:#fff;font-weight:700}
+.badges{
+ position:absolute;top:55px;left:50%;transform:translateX(-50%);
+ display:flex;align-items:center;justify-content:center;gap:10px;
+ pointer-events:none;z-index:19;
+ padding:3px 8px;border-radius:999px;
+ background:rgba(9,16,26,.62);backdrop-filter:blur(8px);
+ color:var(--muted);white-space:nowrap;
+}
+.badge{padding:0;border:0;background:transparent;font-size:9px;color:var(--muted)}
+.badge+.badge::before{content:"·";margin-right:10px;color:#53647d}
+.badge strong{color:#dce8f8;font-weight:650}
+.groupHighlightBadge{position:absolute;left:12px;bottom:12px;z-index:16;max-width:min(620px,78%);padding:8px 10px;border:1px solid #8db4ff;border-radius:10px;background:rgba(14,27,46,.92);backdrop-filter:blur(10px);font-size:10px;line-height:1.55;display:none}
+.mapTools{position:absolute;top:12px;right:12px;z-index:21;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.mapToolBtn{width:38px;height:38px;margin:0;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(12,20,32,.88);backdrop-filter:blur(10px);box-shadow:0 5px 18px rgba(0,0,0,.22)}
+.mapToolBtn svg{width:18px;height:18px;stroke:#edf4ff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapToolBtn.active{border-color:#6796d9;background:#1a2b43}
+.searchPopover{width:270px;padding:10px;border:1px solid #365071;border-radius:11px;background:rgba(12,20,32,.96);backdrop-filter:blur(14px);box-shadow:0 12px 30px rgba(0,0,0,.36);display:none}
+.searchPopover.open{display:block}
+.searchPopover .searchTitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:11px;font-weight:700}
+.searchPopover .searchHint{font-size:9px;color:var(--muted);line-height:1.45;margin-top:6px}
+.inspectorTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(16,25,39,.96);backdrop-filter:blur(10px);z-index:10}
+.tab{margin:0;padding:7px 4px;background:transparent;font-size:10px}
+.tab.active{background:#1f304a;border-color:#3c628f}
+.tabBody{display:none;padding:14px;overflow:auto}.tabBody.active{display:block}
+.cards{display:grid;gap:7px}.card{border:1px solid var(--line);border-radius:10px;background:#0d1521;padding:10px;cursor:pointer}
+.card:hover{border-color:#516889}.card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cardHead{display:flex;justify-content:space-between;gap:8px}.metricsText{font-size:9px;color:var(--muted);text-align:right;white-space:nowrap}
+.members{font-size:11px;line-height:1.55;margin-top:7px}.req{color:#b8d2ff;font-weight:700}
+.summaryStats{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 11px}.stat{font-size:9px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#0d1521}.stat b{display:block;font-size:14px}
+.pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.pill{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font-size:9px;background:var(--panel2)}
+.matrixWrap{overflow:auto;max-height:300px;border:1px solid var(--line);border-radius:9px;margin-top:10px}
+table{border-collapse:collapse;font-size:9px;min-width:max-content}th,td{border:1px solid #30394a;padding:5px 6px;text-align:center;white-space:nowrap}th{background:#171d27;position:sticky;z-index:1}thead th{top:0}tbody th{left:0}
+.empty{font-size:11px;color:var(--muted);line-height:1.62;padding:10px;border:1px dashed var(--line);border-radius:9px}
+.warn{color:var(--warn)}.ok{color:var(--good)}
+.metricGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{border:1px solid var(--line);border-radius:9px;padding:8px;background:#0f1825}
+.metric .k{font-size:9px;color:var(--muted)}.metric .v{font-size:16px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}.metric .v.smallv{font-size:12px}
+.rankRow,.affRow,.clusterRow{display:grid;align-items:center;gap:7px;border-bottom:1px solid #1d293c;padding:6px 0;font-size:10px}
+.rankRow{grid-template-columns:22px 1fr 52px}.affRow{grid-template-columns:1fr 42px}.clusterRow{grid-template-columns:1fr 46px}
+.bar{height:4px;border-radius:999px;background:#253249;overflow:hidden;margin-top:4px}.bar>span{display:block;height:100%;background:linear-gradient(90deg,#77a8ff,#b198ff);border-radius:999px}
+.clickName{color:#dcebff;cursor:pointer}.clickName:hover{color:var(--accent);text-decoration:underline}
+.overviewCard{border:1px solid var(--line);border-radius:10px;background:#0d1521;padding:10px;margin-top:8px}
+.path{font-size:11px;line-height:1.7;color:#dce7f8}.path span{color:var(--accent)}
+.relationTags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}.relationTag{font-size:9px;border:1px solid var(--line);border-radius:6px;padding:3px 5px;color:#cbd6e6}
+.splitHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 7px;font-size:9px;background:#0d1521}
+.chordNode{cursor:pointer}
+@media(max-width:1180px){
+ .app{grid-template-columns:270px minmax(0,1fr)}
+ .inspector{position:absolute;right:0;top:0;width:390px;height:100%;z-index:25;box-shadow:-10px 0 24px rgba(0,0,0,.35)}
+}
+@media(max-width:760px){
+ body{overflow:auto}
+ .app{display:block;height:auto}
+ .sidebar,.inspector{position:static;width:auto;height:auto;border:0;border-bottom:1px solid var(--line)}
+ main{height:70vh}
+ .inspectorTabs{position:static}
+ .viewTabs{
+   top:8px;left:8px;right:54px;transform:none;
+   overflow-x:auto;overflow-y:hidden;white-space:nowrap;
+   scrollbar-width:none;
+ }
+ .viewTabs::-webkit-scrollbar{display:none}
+ .viewTabs button{flex:0 0 auto;padding:7px 9px}
+ .mapTools{top:8px;right:8px}
+ .badges{
+   top:52px;left:8px;right:54px;transform:none;
+   width:auto;max-width:none;
+   gap:8px;padding:3px 7px;
+ }
+ .badge+.badge::before{margin-right:8px}
+ .graphInfo{
+   top:80px;left:8px;right:8px;width:auto;
+   max-height:118px;
+ }
+ .groupHighlightBadge{
+   left:8px;right:8px;bottom:8px;max-width:none;
+ }
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="version">Umalytics</div>
+  <h1>ウマ娘 相性探索</h1>
+  <div id="status" class="status" style="margin-top:11px">相性データを読み込み中…</div>
+
+  <details open>
+    <summary>相性ネットワーク / 共通条件</summary>
+    <div class="check"><input id="showLabels" type="checkbox" checked><span>ノード名</span></div>
+    <label>辺の残し方</label>
+    <select id="edgeMode">
+      <option value="union">どちらかの上位N</option>
+      <option value="mutual">双方の上位N</option>
+      <option value="threshold">最低相性値のみ</option>
+    </select>
+    <label>上位 N 人 <span class="value" id="topNValue">10</span></label>
+    <input id="topN" type="range" min="3" max="30" step="1" value="10">
+    <label>最低相性値 <span class="value" id="minValue">20</span></label>
+    <input id="minAffinity" type="range" min="0" max="45" step="1" value="20">
+    <label>ノードサイズ</label>
+    <select id="sizeMetric">
+      <option value="total">全体総相性</option><option value="strength">表示加重次数</option>
+      <option value="betweenness">媒介中心性</option><option value="participation">クラスタ横断度</option>
+      <option value="degree">表示次数</option>
+    </select>
+    <button id="applyGraph">再構築</button>
+  </details>
+
+  <details>
+    <summary>クラスタ</summary>
+    <div id="clusterLegend" class="legend"></div>
+  </details>
+
+</aside>
+
+<main>
+  <div class="viewTabs">
+    <button data-view="affinity" class="active">相性ネットワーク</button>
+    <button data-view="hyper">ハイパーグラフ</button>
+    <button data-view="chord">コード図</button>
+  </div>
+
+  <div id="graphInfo" class="graphInfo"></div>
+
+  <div class="badges" id="viewStats">
+    <div class="badge"><strong id="stat1Value">?</strong> <span id="stat1Label">nodes</span></div>
+    <div class="badge"><strong id="stat2Value">?</strong> <span id="stat2Label">edges</span></div>
+    <div class="badge"><strong id="stat3Value">?</strong> <span id="stat3Label">clusters</span></div>
+  </div>
+
+  <div class="mapTools">
+    <button id="searchToggle" class="mapToolBtn" type="button" title="ノード探索" aria-label="ノード探索" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+    </button>
+    <div id="searchPopover" class="searchPopover">
+      <div class="searchTitle"><span>ノード探索</span><span class="tiny">全グラフ共通</span></div>
+      <input id="search" list="nameList" type="text" placeholder="例: オグリキャップ" autocomplete="off">
+      <datalist id="nameList"></datalist>
+      <div class="grid2"><button id="focus">フォーカス</button><button id="resetView" class="secondary">全体表示</button></div>
+      <label>相性ネットワークの周辺強調</label>
+      <select id="egoDepth"><option value="0">選択だけ</option><option value="1" selected>1 hop</option><option value="2">2 hops</option><option value="99">制限なし</option></select>
+      <div class="searchHint">Enterでもフォーカスできます。</div>
+    </div>
+  </div>
+
+  <div id="view-affinity" class="view active"><div id="affinityNetwork"></div></div>
+  <div id="view-hyper" class="view"><div id="hyperNetwork"></div></div>
+  <div id="view-chord" class="view"><svg id="chordSvg"></svg></div>
+
+  <div id="groupBadge" class="groupHighlightBadge"></div>
+</main>
+
+<section class="inspector">
+  <div class="inspectorTabs">
+    <button class="tab active" data-tab="groups">グループ</button>
+    <button class="tab" data-tab="overview">全体</button>
+    <button class="tab" data-tab="node">ノード</button>
+    <button class="tab" data-tab="pair">2人比較</button>
+  </div>
+
+  <div id="tab-groups" class="tabBody active">
+    <h2>高相性グループ探索</h2>
+    <div class="sub">ここで指定した条件をハイパーグラフにもそのまま適用します。</div>
+    <div class="section" style="margin-top:10px;padding-top:10px">
+      <label>全ペアの最低相性値 <span class="value" id="thresholdValue">25</span></label>
+      <input id="threshold" type="range" min="20" max="45" step="1" value="25">
+      <label>グループ人数</label>
+      <select id="groupSize">
+        <option value="0">指定なし（極大）</option><option value="3">3人</option><option value="4">4人</option>
+        <option value="5" selected>5人</option><option value="6">6人</option><option value="7">7人</option>
+        <option value="8">8人</option><option value="9">9人</option><option value="10">10人</option>
+      </select>
+      <label>必ず含めるウマ娘</label>
+      <textarea id="requiredNames" placeholder="改行またはカンマ区切り"></textarea>
+      <div id="resolved" class="tiny"></div>
+      <label>並び順</label>
+      <select id="sort"><option value="min">最低相性 → 平均相性</option><option value="avg">平均相性 → 最低相性</option><option value="size">人数 → 最低相性 → 平均相性</option></select>
+      <button id="runGroups">条件で検索</button>
+    </div>
+    <div class="section">
+      <input id="filter" type="text" placeholder="候補を名前で絞る">
+      <div id="summary" class="summaryStats"></div>
+      <div id="groups" class="cards"></div>
+    </div>
+    <div id="groupDetail" class="section" style="display:none">
+      <h2 id="detailTitle"></h2><div id="detailMetrics" class="tiny"></div>
+      <div id="memberList" class="pills"></div>
+      <div class="matrixWrap"><table id="matrix"></table></div>
+    </div>
+  </div>
+
+  <div id="tab-overview" class="tabBody">
+    <h2>全体サマリー</h2>
+    <div id="overviewMetrics" class="metricGrid"></div>
+    <div class="section">
+      <div class="splitHead"><h2>ランキング</h2>
+        <select id="rankMetric" style="width:150px"><option value="total">全体総相性</option><option value="strength">表示加重次数</option><option value="betweenness">媒介中心性</option><option value="participation">クラスタ横断度</option><option value="degree">表示次数</option></select>
+      </div>
+      <div id="ranking"></div>
+    </div>
+    <div class="section"><h2>クラスタサマリー</h2><div id="clusterSummary"></div></div>
+  </div>
+
+  <div id="tab-node" class="tabBody">
+    <div id="nodeDetail" class="empty">グラフ上のウマ娘をクリックすると詳細を表示します。</div>
+  </div>
+
+  <div id="tab-pair" class="tabBody">
+    <h2>2人の関係を掘る</h2>
+    <label>A</label><input id="pairA" list="nameList" type="text" placeholder="1人目">
+    <label>B</label><input id="pairB" list="nameList" type="text" placeholder="2人目">
+    <button id="compare">比較・経路表示</button>
+    <div id="pairResult" style="margin-top:12px" class="empty">直接相性、共通関係ID、相性ネットワーク上の強相性経路を表示します。</div>
+  </div>
+</section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const SOURCE_URLS=[
+ "https://raw.githubusercontent.com/mee1080/umaishow/main/core/src/commonMain/kotlin/io/github/mee1080/umaishow/data/Source.kt",
+ "https://cdn.jsdelivr.net/gh/mee1080/umaishow@main/core/src/commonMain/kotlin/io/github/mee1080/umaishow/data/Source.kt"
+];
+const palette=["#6EA6FF","#63D3B1","#F2B84B","#C58AFF","#7AD7F0","#FF8AA4","#A7D74D","#FF9F55","#88A5FF","#65B6AF","#E5C45A","#B992FF"];
+const ARCHETYPES=[
+ {label:"ダート",members:["アグネスデジタル","スマートファルコン","コパノリッキー","ホッコータルマエ","ワンダーアキュート","トランセンド","エスポワールシチー","イナリワン","オグリキャップ"]},
+ {label:"短距離",members:["サクラバクシンオー","カレンチャン","ニシノフラワー","ビコーペガサス","ビリーヴ","シーキングザパール","アストンマーチャン","カルストンライトオ","バンブーメモリー","デュランダル","タイキシャトル"]},
+ {label:"マイル",members:["ウオッカ","ダイワスカーレット","グランアレグリア","ノースフライト","ヤマニンゼファー","ラインクラフト","タイキシャトル","ダイタクヘリオス","シーキングザパール","ニシノフラワー","キングヘイロー"]},
+ {label:"クラシック中距離",members:["スペシャルウィーク","シンボリルドルフ","トウカイテイオー","ナリタブライアン","エアグルーヴ","テイエムオペラオー","アドマイヤベガ","ウイニングチケット","サクラチヨノオー","メジロドーベル","エイシンフラッシュ","ヴィクトワールピサ"]},
+ {label:"中長距離・ステイヤー",members:["メジロマックイーン","ライスシャワー","ゴールドシップ","タイトルホルダー","キタサンブラック","サトノダイヤモンド","マンハッタンカフェ","ナリタトップロード","スーパークリーク","メジロブライト","タマモクロス","マヤノトップガン","オルフェーヴル"]}
+];
+const MAX_CLIQUES=20000, HYPER_DISPLAY_LIMIT=50;
+
+let names=[],relSets=[],weights=new Map(),matrix=[],totals=[],allPairValues=[];
+let currentEdges=[],communities=[],clusterData=[],metrics={};
+let affinityNetwork=null,affinityNodes=null,affinityEdges=null;
+let hyperNetwork=null,hyperNodes=null,hyperEdges=null;
+let groups=[],requiredIds=[],truncated=false,selectedGroupIndex=null,selectedGroupIds=new Set();
+let activeView="affinity",lastSelected=null,selectedChordNode=null;
+
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const fmt=(v,d=0)=>Number.isFinite(v)?Number(v).toFixed(d):"—";
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+async function fetchText(){
+ let last;
+ for(const u of SOURCE_URLS){
+  try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return await r.text()}catch(e){last=e}
+ }throw last;
+}
+function block(text,key){const m=text.match(new RegExp(`const val ${key}: String = """([\\s\\S]*?)"""`));if(!m)throw new Error(`${key} を解析できませんでした`);return m[1].trim()}
+function parseSource(text){
+ names=[];relSets=[];weights=new Map();
+ for(const line of block(text,"chara").split(/\r?\n/).filter(Boolean)){
+  const p=line.indexOf(":");if(p<0)continue;
+  names.push(line.slice(0,p).trim());relSets.push(new Set(line.slice(p+1).split(",").map(Number).filter(Number.isFinite)));
+ }
+ for(const line of block(text,"relation").split(/\r?\n/)){const [a,b]=line.split(":").map(Number);if(Number.isFinite(a)&&Number.isFinite(b))weights.set(a,b)}
+}
+function affinity(i,j){
+ if(i===j)return 0;let a=relSets[i],b=relSets[j];if(a.size>b.size)[a,b]=[b,a];
+ let s=0;for(const id of a)if(b.has(id))s+=weights.get(id)??1;return s;
+}
+function computeMatrix(){
+ const n=names.length;matrix=Array.from({length:n},()=>Array(n).fill(0));totals=Array(n).fill(0);allPairValues=[];let mx=0;
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const v=affinity(i,j);matrix[i][j]=matrix[j][i]=v;totals[i]+=v;totals[j]+=v;allPairValues.push(v);mx=Math.max(mx,v)}
+ allPairValues.sort((a,b)=>a-b);$("threshold").max=Math.max(30,mx);$("minAffinity").max=Math.max(45,mx);
+}
+function percentile(v){let lo=0,hi=allPairValues.length;while(lo<hi){const m=(lo+hi)>>1;if(allPairValues[m]<=v)lo=m+1;else hi=m}return allPairValues.length?100*lo/allPairValues.length:0}
+function topSet(i,n,minV){return new Set([...Array(names.length).keys()].filter(j=>j!==i&&matrix[i][j]>=minV).sort((a,b)=>matrix[i][b]-matrix[i][a]||a-b).slice(0,n))}
+function buildEdges(){
+ const mode=$("edgeMode").value,N=+$("topN").value,minV=+$("minAffinity").value,n=names.length;
+ const tops=mode==="threshold"?null:Array.from({length:n},(_,i)=>topSet(i,N,minV)),out=[];
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+  const w=matrix[i][j];if(w<minV)continue;
+  if(mode==="threshold"||(mode==="union"&&(tops[i].has(j)||tops[j].has(i)))||(mode==="mutual"&&tops[i].has(j)&&tops[j].has(i)))out.push({from:i,to:j,weight:w});
+ }return out;
+}
+function adjacency(edges){
+ const a=Array.from({length:names.length},()=>[]);
+ edges.forEach((e,idx)=>{a[e.from].push([e.to,e.weight,idx]);a[e.to].push([e.from,e.weight,idx])});return a;
+}
+function detectCommunities(edges){
+ const n=names.length,a=adjacency(edges),lab=Array.from({length:n},(_,i)=>i);
+ for(let iter=0;iter<100;iter++){
+  let changed=0;const order=Array.from({length:n},(_,i)=>i).sort((x,y)=>a[y].length-a[x].length||x-y);
+  for(const i of order){
+   if(!a[i].length)continue;const score=new Map();
+   for(const [j,w] of a[i])score.set(lab[j],(score.get(lab[j])||0)+w);
+   let best=lab[i],bestS=-1;for(const [l,s] of score)if(s>bestS||(s===bestS&&l<best)){best=l;bestS=s}
+   if(best!==lab[i]){lab[i]=best;changed++}
+  }if(!changed)break;
+ }
+ const map=new Map();lab.forEach((l,i)=>{if(!map.has(l))map.set(l,[]);map.get(l).push(i)});
+ const sorted=[...map.entries()].sort((a,b)=>b[1].length-a[1].length||a[0]-b[0]),remap=new Map(sorted.map(([old],i)=>[old,i]));
+ return lab.map(x=>remap.get(x));
+}
+function computeDegreeStrength(edges){
+ const degree=Array(names.length).fill(0),strength=Array(names.length).fill(0);
+ edges.forEach(e=>{degree[e.from]++;degree[e.to]++;strength[e.from]+=e.weight;strength[e.to]+=e.weight});return {degree,strength};
+}
+function weightedBetweenness(edges){
+ const n=names.length,a=adjacency(edges),CB=Array(n).fill(0),EPS=1e-12;
+ for(let s=0;s<n;s++){
+  const S=[],P=Array.from({length:n},()=>[]),sigma=Array(n).fill(0),dist=Array(n).fill(Infinity),used=Array(n).fill(false);sigma[s]=1;dist[s]=0;
+  for(let step=0;step<n;step++){
+   let v=-1,best=Infinity;for(let i=0;i<n;i++)if(!used[i]&&dist[i]<best){best=dist[i];v=i}
+   if(v<0)break;used[v]=true;S.push(v);
+   for(const [w,aff] of a[v]){const nd=dist[v]+1/Math.max(aff,.0001);if(nd<dist[w]-EPS){dist[w]=nd;sigma[w]=sigma[v];P[w]=[v]}else if(Math.abs(nd-dist[w])<=EPS){sigma[w]+=sigma[v];P[w].push(v)}}
+  }
+  const delta=Array(n).fill(0);while(S.length){const w=S.pop();for(const v of P[w])if(sigma[w])delta[v]+=(sigma[v]/sigma[w])*(1+delta[w]);if(w!==s)CB[w]+=delta[w]}
+ }
+ const norm=n>2?1/((n-1)*(n-2)):1;return CB.map(x=>x*norm);
+}
+function participation(edges,comm,strength){
+ const by=Array.from({length:names.length},()=>new Map());
+ edges.forEach(e=>{by[e.from].set(comm[e.to],(by[e.from].get(comm[e.to])||0)+e.weight);by[e.to].set(comm[e.from],(by[e.to].get(comm[e.from])||0)+e.weight)});
+ return by.map((m,i)=>{const s=strength[i];if(!s)return 0;let q=0;for(const v of m.values())q+=(v/s)*(v/s);return 1-q});
+}
+function computeMetrics(){
+ const ds=computeDegreeStrength(currentEdges);metrics={total:totals.slice(),degree:ds.degree,strength:ds.strength,betweenness:weightedBetweenness(currentEdges),participation:participation(currentEdges,communities,ds.strength)};
+}
+function classifyCluster(nodeIds){
+ const set=new Set(nodeIds.map(i=>names[i]));
+ const scores=ARCHETYPES.map(a=>{const available=a.members.filter(n=>names.includes(n)),overlap=available.filter(n=>set.has(n));return {...a,score:overlap.length/Math.sqrt(Math.max(1,nodeIds.length)*Math.max(1,available.length))}}).sort((a,b)=>b.score-a.score);
+ const first=scores[0],second=scores[1];let name="混成・境界圏";
+ if(first&&first.score>0){const combine=second&&second.score>=first.score*.72&&second.score>=.12;name=combine?`${first.label} × ${second.label}圏`:`${first.label}圏`}
+ return name;
+}
+function computeClusterData(){
+ const map=new Map();communities.forEach((c,i)=>{if(!map.has(c))map.set(c,{id:c,nodes:[],internalW:0,externalW:0});map.get(c).nodes.push(i)});
+ currentEdges.forEach(e=>{const a=communities[e.from],b=communities[e.to];if(a===b)map.get(a).internalW+=e.weight;else{map.get(a).externalW+=e.weight;map.get(b).externalW+=e.weight}});
+ clusterData=[...map.values()].sort((a,b)=>b.nodes.length-a.nodes.length||a.id-b.id);
+ clusterData.forEach((c,idx)=>{c.name=classifyCluster(c.nodes);c.displayId=idx+1;c.cohesion=(c.internalW+c.externalW)?c.internalW/(c.internalW+c.externalW):0;c.representatives=c.nodes.slice().sort((x,y)=>metrics.strength[y]-metrics.strength[x]||x-y).slice(0,3)});
+}
+function clusterOrder(){
+ const out=[];for(const c of clusterData.slice().sort((a,b)=>a.id-b.id))out.push(...c.nodes.slice().sort((a,b)=>metrics.strength[b]-metrics.strength[a]||names[a].localeCompare(names[b],"ja")));return out;
+}
+function metricLabel(k){return {total:"全体総相性",degree:"表示次数",strength:"表示加重次数",betweenness:"媒介中心性",participation:"クラスタ横断度"}[k]||k}
+function metricValue(k,v){return k==="betweenness"||k==="participation"?fmt(v,3):fmt(v,0)}
+function scaleValues(arr,min=12,max=32){const f=arr.filter(Number.isFinite),lo=Math.min(...f),hi=Math.max(...f);return arr.map(v=>hi===lo?(min+max)/2:min+(max-min)*(v-lo)/(hi-lo))}
+function baseNodeColor(i){const col=palette[communities[i]%palette.length];return {background:col,border:col,highlight:{background:col,border:col},hover:{background:col,border:col}}}
+function baseNodeFont(){return {size:12,color:"#f2f6ff",strokeWidth:4,strokeColor:"#09101a",background:"rgba(9,16,26,0)"}}
+function selectedNodeFont(){return {size:14,color:"#ffffff",strokeWidth:4,strokeColor:"#07101d",background:"rgba(54,96,155,.88)"}}
+function mutedNodeFont(){return {size:12,color:"rgba(220,230,245,.28)",strokeWidth:3,strokeColor:"rgba(9,16,26,.30)",background:"rgba(9,16,26,0)"}}
+
+/* affinity network */
+function renderAffinityNetwork(){
+ hideGraphInfo();
+ const host=$("affinityNetwork");
+ host.style.opacity="1";
+ const sizeKey=$("sizeMetric").value,sizes=scaleValues(metrics[sizeKey]),minV=+$("minAffinity").value;
+
+ const nd=names.map((name,i)=>({
+  id:i,
+  label:$("showLabels").checked?name:"",
+  value:sizes[i],
+  group:communities[i],
+  borderWidth:1.2,
+  font:baseNodeFont(),
+  color:baseNodeColor(i)
+ }));
+
+ const ed=currentEdges.map((e,k)=>({
+  id:k,
+  from:e.from,
+  to:e.to,
+  width:clamp(.55+(e.weight-minV)*.20,.55,5),
+  color:{opacity:.22},
+  smooth:{enabled:true,type:"continuous",roundness:.05}
+ }));
+
+ const gs={};
+ clusterData.forEach(c=>{
+  const col=palette[c.id%palette.length];
+  gs[c.id]={color:{background:col,border:col},font:{color:"#fff"}};
+ });
+
+ affinityNodes=new vis.DataSet(nd);
+ affinityEdges=new vis.DataSet(ed);
+
+ if(affinityNetwork)affinityNetwork.destroy();
+
+ affinityNetwork=new vis.Network(
+  host,
+  {nodes:affinityNodes,edges:affinityEdges},
+  {
+   nodes:{shape:"dot",scaling:{min:12,max:36}},
+   edges:{selectionWidth:2},
+   groups:gs,
+
+   // 修正前と同じく vis-network 自身に自然な初期配置を任せる。
+   // 固定 seed にして、再構築時の大きな見た目の揺れだけ抑える。
+   layout:{improvedLayout:true,randomSeed:42},
+
+   physics:{
+    enabled:true,
+    solver:"barnesHut",
+
+    // 以前の 260 iteration より軽量。
+    // 初期配置が既に良いため、短い緩和だけで十分。
+    stabilization:{enabled:true,iterations:140,updateInterval:35,fit:true},
+
+    barnesHut:{
+     gravitationalConstant:-5800,
+     centralGravity:.13,
+     springLength:105,
+     springConstant:.035,
+     damping:.24,
+     avoidOverlap:.36
+    }
+   },
+
+   interaction:{
+    hover:true,
+    navigationButtons:true,
+    keyboard:true,
+    tooltipDelay:100,
+    multiselect:true
+   }
+  }
+ );
+
+ affinityNetwork.once("stabilized",()=>{
+  affinityNetwork.fit({animation:false});
+ });
+
+ affinityNetwork.on("click",p=>{
+  if(p.nodes.length){
+   clearGroupState(false);
+   lastSelected=p.nodes[0];
+   showNode(lastSelected);
+   highlightEgo(lastSelected,+$("egoDepth").value);
+   showAffinityNodeInfo(lastSelected);
+   switchTab("node");
+  }else if(p.edges.length){
+   clearGroupState(false);
+   lastSelected=null;
+   resetAffinityHighlight();
+   affinityNetwork.selectEdges([p.edges[0]]);
+   showAffinityEdgeInfo(+p.edges[0]);
+  }else{
+   clearGroupState(false);
+   lastSelected=null;
+   resetAffinityHighlight();
+   hideGraphInfo();
+  }
+ });
+
+ affinityNetwork.on("doubleClick",p=>{
+  if(p.nodes.length){
+   affinityNetwork.focus(p.nodes[0],{scale:1.55,animation:true});
+  }
+ });
+}
+
+function resetAffinityHighlight(){
+ if(!affinityNodes||!affinityEdges)return;const minV=+$("minAffinity").value;
+ affinityNodes.update(names.map((_,i)=>({id:i,opacity:1,borderWidth:1.2,color:baseNodeColor(i),font:baseNodeFont()})));
+ affinityEdges.update(currentEdges.map((e,k)=>({id:k,color:{opacity:.22},width:clamp(.55+(e.weight-minV)*.20,.55,5)})));affinityNetwork.unselectAll();
+}
+function highlightEgo(root,depth){
+ resetAffinityHighlight();
+ if(depth>=99){affinityNodes.update(names.map((_,i)=>({id:i,font:i===root?selectedNodeFont():baseNodeFont(),borderWidth:i===root?4:1.2})));affinityNetwork.selectNodes([root]);return}
+ const a=adjacency(currentEdges),seen=new Set([root]),q=[[root,0]];
+ while(q.length){const [v,d]=q.shift();if(d>=depth)continue;for(const [w] of a[v])if(!seen.has(w)){seen.add(w);q.push([w,d+1])}}
+ affinityNodes.update(names.map((_,i)=>({id:i,opacity:seen.has(i)?1:.12,borderWidth:i===root?4:seen.has(i)?2:1.2,font:i===root?selectedNodeFont():(seen.has(i)?baseNodeFont():mutedNodeFont())})));
+ affinityEdges.update(currentEdges.map((e,k)=>({id:k,color:{opacity:seen.has(e.from)&&seen.has(e.to)?.82:.03},width:seen.has(e.from)&&seen.has(e.to)?3:.4})));affinityNetwork.selectNodes([...seen]);
+}
+function highlightAffinityGroup(ids){
+ if(!affinityNodes)return;resetAffinityHighlight();const set=new Set(ids);
+ affinityNodes.update(names.map((_,i)=>({id:i,opacity:set.has(i)?1:.07,borderWidth:set.has(i)?5:1.2,color:baseNodeColor(i),font:set.has(i)?selectedNodeFont():mutedNodeFont()})));
+ affinityEdges.update(currentEdges.map((e,k)=>{const inside=set.has(e.from)&&set.has(e.to),touch=set.has(e.from)||set.has(e.to);return {id:k,color:{opacity:inside?.95:touch?.09:.015},width:inside?Math.max(2.5,.65+(e.weight-(+$("minAffinity").value))*.28):.5}}));
+ affinityNetwork.selectNodes(ids);affinityNetwork.fit({nodes:ids,animation:{duration:420,easingFunction:"easeInOutQuad"}});
+}
+
+/* hypergraph */
+function renderHypergraph(){
+ if(hyperNetwork){hyperNetwork.destroy();hyperNetwork=null}
+ const used=groups.slice(0,HYPER_DISPLAY_LIMIT),occ=new Map();
+ used.forEach(g=>g.ids.forEach(i=>occ.set(i,(occ.get(i)||0)+1)));
+ const nd=[],ed=[];
+ for(const i of occ.keys())nd.push({id:`u${i}`,label:names[i],shape:"dot",size:8+Math.min(12,(occ.get(i)||1)*1.1),color:baseNodeColor(i),font:baseNodeFont()});
+ used.forEach((g,gi)=>{nd.push({id:`g${gi}`,label:`G${gi+1}`,shape:"box",margin:5,color:{background:"#24324a",border:"#89aef0",highlight:{background:"#24324a",border:"#89aef0"}},font:{color:"#edf4ff",size:9}});g.ids.forEach(i=>ed.push({from:`g${gi}`,to:`u${i}`,width:1.2,color:{opacity:.28},smooth:{enabled:true,type:"continuous",roundness:.12}}))});
+ hyperNodes=new vis.DataSet(nd);hyperEdges=new vis.DataSet(ed);
+ hyperNetwork=new vis.Network($("hyperNetwork"),{nodes:hyperNodes,edges:hyperEdges},{physics:{stabilization:{iterations:260},barnesHut:{gravitationalConstant:-4300,centralGravity:.08,springLength:75,springConstant:.035,damping:.32,avoidOverlap:.55}},interaction:{hover:true,tooltipDelay:80},edges:{selectionWidth:2}});
+ updateViewStats();
+ hyperNetwork.on("click",p=>{
+  if(p.nodes.length){
+   const id=String(p.nodes[0]);
+   if(id.startsWith("g")){
+    const gi=+id.slice(1);
+    if(groups[gi]){showGroup(gi,false);showHyperGroupInfo(gi)}
+   }else if(id.startsWith("u")){
+    clearGroupState(false);const i=+id.slice(1);lastSelected=i;showNode(i);switchTab("node");highlightHyperNode(i);showHyperNodeInfo(i)
+   }
+  }else if(p.edges.length){
+   clearGroupState(false);lastSelected=null;resetHyperHighlight();hyperNetwork.selectEdges([p.edges[0]]);showHyperEdgeInfo(p.edges[0]);
+  }else{
+   clearGroupState(false);lastSelected=null;resetHyperHighlight();hideGraphInfo();
+  }
+ });
+}
+function resetHyperHighlight(){
+ if(!hyperNodes||!hyperEdges)return;
+ const used=groups.slice(0,HYPER_DISPLAY_LIMIT);
+ hyperNodes.update(hyperNodes.get().map(n=>({id:n.id,opacity:1,borderWidth:1,font:String(n.id).startsWith("u")?baseNodeFont():undefined})));
+ hyperEdges.update(hyperEdges.get().map((e)=>({id:e.id,color:{opacity:.28},width:1.2})));hyperNetwork.unselectAll();
+}
+function highlightHyperNode(i){
+ if(!hyperNetwork)return;resetHyperHighlight();const id=`u${i}`,connected=hyperNetwork.getConnectedNodes(id),keep=new Set([id,...connected]);
+ hyperNodes.update(hyperNodes.get().map(n=>({id:n.id,opacity:keep.has(String(n.id))?1:.10,font:String(n.id)===id?selectedNodeFont():String(n.id).startsWith("u")?(keep.has(String(n.id))?baseNodeFont():mutedNodeFont()):undefined})));
+ hyperEdges.update(hyperEdges.get().map(e=>({id:e.id,color:{opacity:(String(e.from)===id||String(e.to)===id)?.9:.04},width:(String(e.from)===id||String(e.to)===id)?3:0.6})));hyperNetwork.selectNodes([id,...connected]);
+}
+function highlightHyperGroup(index){
+ if(!hyperNetwork||index>=Math.min(groups.length,HYPER_DISPLAY_LIMIT))return;resetHyperHighlight();const gid=`g${index}`,g=groups[index],keep=new Set([gid,...g.ids.map(i=>`u${i}`)]);
+ hyperNodes.update(hyperNodes.get().map(n=>({id:n.id,opacity:keep.has(String(n.id))?1:.08,font:String(n.id).startsWith("u")?(keep.has(String(n.id))?selectedNodeFont():mutedNodeFont()):undefined,borderWidth:String(n.id)===gid?3:1})));
+ hyperEdges.update(hyperEdges.get().map(e=>({id:e.id,color:{opacity:(String(e.from)===gid||String(e.to)===gid)?.95:.03},width:(String(e.from)===gid||String(e.to)===gid)?3:.5})));hyperNetwork.selectNodes([...keep]);hyperNetwork.fit({nodes:[...keep],animation:true});
+}
+
+/* chord */
+function polar(cx,cy,r,a){return [cx+Math.cos(a)*r,cy+Math.sin(a)*r]}
+function arcPath(cx,cy,r,a0,a1){const p0=polar(cx,cy,r,a0),p1=polar(cx,cy,r,a1),large=(a1-a0)>Math.PI?1:0;return `M${p0[0]},${p0[1]} A${r},${r} 0 ${large} 1 ${p1[0]},${p1[1]}`}
+function renderChord(){
+ const svg=$("chordSvg"),view=$("view-chord"),rect=view.getBoundingClientRect();if(rect.width<10||rect.height<10)return;
+ const w=rect.width,h=rect.height,cx=w/2,cy=h/2,R=Math.max(120,Math.min(w,h)*.39),order=clusterOrder(),n=order.length,gap=.018,totalGap=clusterData.length*gap,usable=Math.PI*2-totalGap;
+ const angle=new Map(),ranges=[];let a=-Math.PI/2;
+ for(const cl of clusterData.slice().sort((x,y)=>x.id-y.id)){const ids=cl.nodes.slice().sort((x,y)=>metrics.strength[y]-metrics.strength[x]||names[x].localeCompare(names[y],"ja")),span=usable*(ids.length/n),start=a;ids.forEach((id,k)=>angle.set(id,start+span*(k+.5)/ids.length));ranges.push({cl,start,end:start+span});a+=span+gap}
+ const minW=Math.min(...currentEdges.map(e=>e.weight),0),maxW=Math.max(...currentEdges.map(e=>e.weight),1);
+ let htm=`<rect class="chordBg" width="${w}" height="${h}" fill="#09101a"/>`;
+ for(const e of currentEdges){const a1=angle.get(e.from),a2=angle.get(e.to),p1=polar(cx,cy,R-10,a1),p2=polar(cx,cy,R-10,a2),t=(e.weight-minW)/(maxW-minW||1),op=.045+.16*t,sw=.45+1.6*t;htm+=`<path class="chordEdge" data-a="${e.from}" data-b="${e.to}" d="M${p1[0]},${p1[1]} Q${cx},${cy} ${p2[0]},${p2[1]}" fill="none" stroke="#9bb8ff" stroke-opacity="${op}" stroke-width="${sw}"/>`}
+ for(const r of ranges){const col=palette[r.cl.id%palette.length],mid=(r.start+r.end)/2,p=polar(cx,cy,R+25,mid);htm+=`<path d="${arcPath(cx,cy,R+8,r.start,r.end)}" fill="none" stroke="${col}" stroke-width="9"/>`;if((r.end-r.start)>.18)htm+=`<text x="${p[0]}" y="${p[1]}" fill="#dbe7f8" font-size="10" text-anchor="middle" dominant-baseline="middle">${esc(r.cl.name)}</text>`}
+ for(const id of order){const ang=angle.get(id),p=polar(cx,cy,R,ang),col=palette[communities[id]%palette.length];htm+=`<circle class="chordNode" data-node="${id}" cx="${p[0]}" cy="${p[1]}" r="4" fill="${col}" stroke="${col}" stroke-width="1.2"><title>${esc(names[id])}</title></circle>`}
+ htm+=`<text id="chordCenterTitle" x="${cx}" y="${cy-4}" fill="#edf4ff" font-size="15" font-weight="700" text-anchor="middle">コード図</text><text id="chordCenterSub" x="${cx}" y="${cy+15}" fill="#95a6c0" font-size="10" text-anchor="middle">${currentEdges.length} edges</text>`;
+ svg.setAttribute("viewBox",`0 0 ${w} ${h}`);svg.innerHTML=htm;
+ svg.querySelectorAll(".chordNode").forEach(el=>{
+  el.addEventListener("mouseenter",()=>{if(selectedChordNode==null)highlightChordNode(+el.dataset.node,false)});
+  el.addEventListener("mouseleave",()=>{if(selectedChordNode==null)resetChordHighlight()});
+  el.addEventListener("click",ev=>{ev.stopPropagation();selectedChordNode=+el.dataset.node;clearGroupState(false);lastSelected=selectedChordNode;highlightChordNode(selectedChordNode,true);showNode(selectedChordNode);switchTab("node")});
+ });
+ svg.addEventListener("click",ev=>{
+  if(!(ev.target===svg||ev.target.classList?.contains("chordBg")))return;
+  clearGroupState(false);selectedChordNode=null;lastSelected=null;resetChordHighlight();hideGraphInfo();
+ });
+ updateViewStats();
+}
+function resetChordHighlight(){
+ const svg=$("chordSvg");svg.querySelectorAll(".chordEdge").forEach(e=>{e.style.strokeOpacity="";e.style.strokeWidth=""});svg.querySelectorAll(".chordNode").forEach(n=>{n.style.opacity="1";n.setAttribute("r","4")});
+ const t=svg.querySelector("#chordCenterTitle"),s=svg.querySelector("#chordCenterSub");if(t)t.textContent="コード図";if(s)s.textContent=`${currentEdges.length} edges`;
+}
+function highlightChordNode(id,persistent=false){
+ const svg=$("chordSvg");svg.querySelectorAll(".chordEdge").forEach(e=>{const hit=+e.dataset.a===id||+e.dataset.b===id;e.style.strokeOpacity=hit?".78":".018";e.style.strokeWidth=hit?"2.7":".4"});
+ svg.querySelectorAll(".chordNode").forEach(n=>{const hit=+n.dataset.node===id;n.style.opacity=hit?"1":".28";n.setAttribute("r",hit?"6":"4")});
+ const con=currentEdges.filter(e=>e.from===id||e.to===id).map(e=>({other:e.from===id?e.to:e.from,w:e.weight})).sort((a,b)=>b.w-a.w).slice(0,6),t=svg.querySelector("#chordCenterTitle"),s=svg.querySelector("#chordCenterSub");if(t)t.textContent=names[id];if(s)s.textContent=con.map(x=>`${names[x.other]} ${x.w}`).join(" · ");
+}
+function highlightChordGroup(ids){
+ const set=new Set(ids),svg=$("chordSvg");
+ svg.querySelectorAll(".chordEdge").forEach(e=>{const inside=set.has(+e.dataset.a)&&set.has(+e.dataset.b),touch=set.has(+e.dataset.a)||set.has(+e.dataset.b);e.style.strokeOpacity=inside?".9":touch?".10":".012";e.style.strokeWidth=inside?"2.8":".45"});
+ svg.querySelectorAll(".chordNode").forEach(n=>{const hit=set.has(+n.dataset.node);n.style.opacity=hit?"1":".16";n.setAttribute("r",hit?"6":"4")});
+}
+
+function updateViewStats(){
+ const s1=$("stat1Value"),l1=$("stat1Label");
+ const s2=$("stat2Value"),l2=$("stat2Label");
+ const s3=$("stat3Value"),l3=$("stat3Label");
+
+ if(activeView==="affinity"){
+  s1.textContent=names.length;l1.textContent="nodes";
+  s2.textContent=currentEdges.length;l2.textContent="edges";
+  s3.textContent=clusterData.length;l3.textContent="clusters";
+ }else if(activeView==="hyper"){
+  const used=groups.slice(0,HYPER_DISPLAY_LIMIT);
+  const members=new Set();
+  let incidences=0;
+  used.forEach(g=>{g.ids.forEach(i=>members.add(i));incidences+=g.ids.length});
+  s1.textContent=used.length;l1.textContent="groups";
+  s2.textContent=members.size;l2.textContent="members";
+  s3.textContent=incidences;l3.textContent="incidences";
+ }else{
+  s1.textContent=names.length;l1.textContent="nodes";
+  s2.textContent=currentEdges.length;l2.textContent="chords";
+  s3.textContent=clusterData.length;l3.textContent="clusters";
+ }
+}
+
+/* rebuild */
+function rebuild(){
+ currentEdges=buildEdges();communities=detectCommunities(currentEdges);computeMetrics();computeClusterData();
+ renderAffinityNetwork();renderChord();renderOverview();renderRanking();renderClusters();updateViewStats();
+ if(groups.length)renderHypergraph();
+}
+
+/* group search */
+function thresholdAdj(t){const a=Array.from({length:names.length},()=>new Set());for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++)if(matrix[i][j]>=t){a[i].add(j);a[j].add(i)}return a}
+function intersection(a,b){const o=new Set(),[s,l]=a.size<=b.size?[a,b]:[b,a];for(const x of s)if(l.has(x))o.add(x);return o}
+function parseRequired(){
+ const raw=$("requiredNames").value.split(/[\n,、]+/).map(s=>s.trim()).filter(Boolean),ids=[],errors=[];
+ for(const token of [...new Set(raw)]){let idx=names.findIndex(n=>n===token);if(idx<0){const m=names.map((n,i)=>({n,i})).filter(x=>x.n.includes(token));if(m.length===1)idx=m[0].i;else if(!m.length)errors.push(`「${token}」は見つかりません`);else errors.push(`「${token}」は複数候補: ${m.slice(0,6).map(x=>x.n).join(" / ")}`)}if(idx>=0&&!ids.includes(idx))ids.push(idx)}
+ return {ids,errors};
+}
+function requiredCompatible(ids,t){for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++)if(matrix[ids[a]][ids[b]]<t)return {ok:false,a:ids[a],b:ids[b],value:matrix[ids[a]][ids[b]]};return {ok:true}}
+function findMaximalCliques(adj,required,minSize){
+ let out=[];truncated=false;const eligible=new Set(Array.from({length:names.length},(_,i)=>i).filter(i=>adj[i].size>=minSize-1));let R=[...required],P=new Set(eligible),X=new Set();for(const r of R)P.delete(r);for(const r of R)P=intersection(P,adj[r]);
+ function bk(R,P,X){if(truncated||R.length+P.size<minSize)return;if(out.length>=MAX_CLIQUES){truncated=true;return}if(P.size===0&&X.size===0){if(R.length>=minSize)out.push(R.slice());return}let pivot=null,best=-1;for(const u of new Set([...P,...X])){let score=0;for(const v of adj[u])if(P.has(v))score++;if(score>best){best=score;pivot=u}}const cand=[...P].filter(v=>pivot===null||!adj[pivot].has(v)).sort((a,b)=>adj[b].size-adj[a].size||a-b);for(const v of cand){bk([...R,v],intersection(P,adj[v]),intersection(X,adj[v]));P.delete(v);X.add(v);if(truncated)return}}
+ bk(R,P,X);return out;
+}
+function exactSizeGroups(maxCliques,k,required){
+ const req=new Set(required),seen=new Set(),out=[],need=k-required.length;if(need<0)return out;
+ for(const clique of maxCliques){if(!required.every(x=>clique.includes(x)))continue;const extras=clique.filter(x=>!req.has(x));if(extras.length<need)continue;const pick=[];
+  function rec(start,left){if(out.length>=MAX_CLIQUES){truncated=true;return}if(left===0){const ids=[...required,...pick].sort((a,b)=>a-b),key=ids.join(",");if(!seen.has(key)){seen.add(key);out.push(ids)}return}for(let i=start;i<=extras.length-left;i++){pick.push(extras[i]);rec(i+1,left-1);pick.pop();if(truncated)return}}
+  rec(0,need);if(truncated)return out}
+ return out;
+}
+function stats(ids){let min=Infinity,max=0,sum=0,count=0;for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++){const v=matrix[ids[a]][ids[b]];min=Math.min(min,v);max=Math.max(max,v);sum+=v;count++}return {min:min===Infinity?0:min,max,avg:count?sum/count:0,pairs:count}}
+function sortGroups(){const mode=$("sort").value;groups.sort((A,B)=>{const a=A.stat,b=B.stat;if(mode==="min")return b.min-a.min||B.ids.length-A.ids.length||b.avg-a.avg;if(mode==="avg")return b.avg-a.avg||b.min-a.min||B.ids.length-A.ids.length;return B.ids.length-A.ids.length||b.min-a.min||b.avg-a.avg})}
+function runGroups(){
+ clearGroupState(false);const t=+$("threshold").value,k=+$("groupSize").value,parsed=parseRequired();requiredIds=parsed.ids;
+ if(parsed.errors.length){$("resolved").innerHTML=`<span class="warn">${parsed.errors.join("<br>")}</span>`;groups=[];renderGroups();renderHypergraph();return}
+ $("resolved").innerHTML=requiredIds.length?`<span class="ok">指定: ${requiredIds.map(i=>esc(names[i])).join(" / ")}</span>`:"指定なし";
+ if(k>0&&requiredIds.length>k){groups=[];renderGroups();renderHypergraph();$("resolved").innerHTML+=`<br><span class="warn">指定人数がグループ人数を超えています。</span>`;return}
+ const comp=requiredCompatible(requiredIds,t);if(!comp.ok){groups=[];renderGroups();renderHypergraph();$("resolved").innerHTML+=`<br><span class="warn">${esc(names[comp.a])} × ${esc(names[comp.b])} は ${comp.value}</span>`;return}
+ $("groups").innerHTML=`<div class="empty">探索中…</div>`;
+ setTimeout(()=>{const adj=thresholdAdj(t),minSize=k>0?k:Math.max(3,requiredIds.length),maximal=findMaximalCliques(adj,requiredIds,minSize),raw=k>0?exactSizeGroups(maximal,k,requiredIds):maximal;groups=raw.map(ids=>({ids,stat:stats(ids)}));sortGroups();renderGroups();renderHypergraph();updateViewStats();if(activeView==="hyper"&&hyperNetwork)setTimeout(()=>hyperNetwork.fit({animation:true}),40)},20);
+}
+function renderGroups(){
+ const f=$("filter").value.trim(),visible=groups.filter(g=>!f||g.ids.some(i=>names[i].includes(f))),best=visible.length?Math.max(...visible.map(g=>g.stat.min)):0;
+ $("summary").innerHTML=`<div class="stat">候補<b>${visible.length}</b></div><div class="stat">最高最低相性<b>${best||"—"}</b></div><div class="stat">ハイパー表示<b>${Math.min(groups.length,HYPER_DISPLAY_LIMIT)}</b></div>${truncated?`<div class="stat warn">上限<b>${MAX_CLIQUES}</b></div>`:""}`;
+ if(!visible.length){$("groups").innerHTML=`<div class="empty">条件を満たすグループがありません。</div>`;$("groupDetail").style.display="none";return}
+ $("groups").innerHTML="";
+ visible.slice(0,500).forEach(g=>{const idx=groups.indexOf(g),d=document.createElement("div");d.className="card"+(idx===selectedGroupIndex?" selected":"");d.dataset.g=idx;d.innerHTML=`<div class="cardHead"><b>G${idx+1} · ${g.ids.length}人</b><div class="metricsText">最低 ${g.stat.min}<br>平均 ${g.stat.avg.toFixed(1)}</div></div><div class="members">${g.ids.map(i=>requiredIds.includes(i)?`<span class="req">${esc(names[i])}</span>`:esc(names[i])).join(" ・ ")}</div>`;d.onclick=()=>showGroup(idx,true);$("groups").appendChild(d)});
+}
+function syncSelectedCards(){document.querySelectorAll("#groups .card").forEach(d=>d.classList.toggle("selected",+d.dataset.g===selectedGroupIndex))}
+function cellColor(v,min,max){if(max<=min)return "rgba(80,160,120,.34)";const x=(v-min)/(max-min);return `rgba(73,162,115,${.16+.46*x})`}
+function showGroup(index,fit=true){
+ selectedGroupIndex=index;selectedGroupIds=new Set(groups[index].ids);syncSelectedCards();applyGroupHighlight(fit);
+ const g=groups[index],ids=g.ids,s=g.stat;$("groupDetail").style.display="block";$("detailTitle").textContent=`G${index+1}：${ids.length}人の完全高相性グループ`;
+ $("detailMetrics").innerHTML=`<b>最低相性 ${s.min}</b>　平均 ${s.avg.toFixed(1)}　最高 ${s.max}<br>${s.pairs}通りの全ペアが条件を満たします。`;
+ $("memberList").innerHTML=ids.map(i=>`<span class="pill">${esc(names[i])}</span>`).join("");
+ let h="<thead><tr><th></th>"+ids.map(i=>`<th>${esc(names[i])}</th>`).join("")+"</tr></thead><tbody>";
+ for(const i of ids){h+=`<tr><th>${esc(names[i])}</th>`;for(const j of ids){if(i===j)h+=`<td>—</td>`;else{const v=matrix[i][j];h+=`<td style="background:${cellColor(v,s.min,s.max)}"><b>${v}</b></td>`}}h+="</tr>"}$("matrix").innerHTML=h+"</tbody>";
+}
+function applyGroupHighlight(fit=true){
+ if(selectedGroupIndex==null||!groups[selectedGroupIndex])return;const ids=groups[selectedGroupIndex].ids;
+ if(activeView==="affinity")highlightAffinityGroup(ids);else if(activeView==="hyper")highlightHyperGroup(selectedGroupIndex);else highlightChordGroup(ids);
+ const g=groups[selectedGroupIndex];$("groupBadge").style.display="block";$("groupBadge").innerHTML=`<b>G${selectedGroupIndex+1}</b> · ${g.ids.length}人　最低 ${g.stat.min} / 平均 ${g.stat.avg.toFixed(1)}<br>${g.ids.map(i=>esc(names[i])).join(" ・ ")}`;
+}
+function clearGroupState(reset=true){
+ selectedGroupIndex=null;selectedGroupIds.clear();syncSelectedCards();$("groupBadge").style.display="none";
+ if(reset)resetAllHighlights();
+}
+
+/* overview */
+function metricCard(k,v){return `<div class="metric"><div class="k">${k}</div><div class="v">${v}</div></div>`}
+function renderOverview(){
+ const n=names.length,e=currentEdges.length,maxPairs=n*(n-1)/2,density=maxPairs?e/maxPairs:0,avg=e?currentEdges.reduce((s,x)=>s+x.weight,0)/e:0,bridge=[...Array(n).keys()].sort((a,b)=>metrics.participation[b]-metrics.participation[a]||a-b)[0];
+ $("overviewMetrics").innerHTML=[["表示密度",(100*density).toFixed(1)+"%"],["平均相性",avg.toFixed(1)],["最大クラスタ",(clusterData[0]?.nodes.length||0)+"人"],["越境度1位",bridge!=null?names[bridge]:"—"]].map(([k,v])=>`<div class="metric"><div class="k">${k}</div><div class="v smallv">${esc(v)}</div></div>`).join("");
+ $("clusterSummary").innerHTML=clusterData.map(c=>{const col=palette[c.id%palette.length];return `<div class="overviewCard"><div class="clusterRow"><div><b style="color:${col}">${esc(c.name)}</b><div class="tiny">代表: ${c.representatives.map(i=>esc(names[i])).join("、")}</div></div><div>${c.nodes.length}人</div></div><div class="bar"><span style="width:${Math.round(c.cohesion*100)}%"></span></div><div class="tiny" style="margin-top:5px">内部結束率 ${Math.round(c.cohesion*100)}% / C${c.displayId}</div></div>`}).join("");
+}
+function renderRanking(){
+ const key=$("rankMetric").value,arr=metrics[key],order=[...Array(names.length).keys()].sort((a,b)=>arr[b]-arr[a]||names[a].localeCompare(names[b],"ja")).slice(0,15),max=arr[order[0]]||1;
+ $("ranking").innerHTML=order.map((i,r)=>`<div class="rankRow"><div class="tiny">${r+1}</div><div><span class="clickName" data-rank-node="${i}">${esc(names[i])}</span><div class="bar"><span style="width:${100*(arr[i]/max)}%"></span></div></div><div style="text-align:right">${metricValue(key,arr[i])}</div></div>`).join("");
+ document.querySelectorAll("[data-rank-node]").forEach(el=>el.onclick=()=>focusNode(+el.dataset.rankNode));
+}
+function renderClusters(){
+ $("clusterLegend").innerHTML=clusterData.map(c=>`<span class="chip" style="border-color:${palette[c.id%palette.length]}">${esc(c.name)} · ${c.nodes.length}</span>`).join("");
+}
+
+/* node detail / pair */
+function showNode(i){
+ const top=matrix[i].map((v,j)=>({j,v})).filter(x=>x.j!==i).sort((a,b)=>b.v-a.v||a.j-b.j).slice(0,15),max=top[0]?.v||1,clusterWeights=new Map();
+ currentEdges.forEach(e=>{if(e.from===i){const c=communities[e.to];clusterWeights.set(c,(clusterWeights.get(c)||0)+e.weight)}else if(e.to===i){const c=communities[e.from];clusterWeights.set(c,(clusterWeights.get(c)||0)+e.weight)}});
+ const cobj=clusterData.find(c=>c.id===communities[i]),clusterList=[...clusterWeights.entries()].sort((a,b)=>b[1]-a[1]);
+ $("nodeDetail").innerHTML=`<div style="font-size:17px;font-weight:700">${esc(names[i])}</div><div class="tiny" style="margin-top:3px">${esc(cobj?.name||("C"+(communities[i]+1)))}</div>
+ <div class="metricGrid" style="margin-top:10px">${metricCard("全体総相性",fmt(metrics.total[i]))}${metricCard("表示次数",fmt(metrics.degree[i]))}${metricCard("加重次数",fmt(metrics.strength[i]))}${metricCard("媒介中心性",fmt(metrics.betweenness[i],3))}${metricCard("クラスタ横断度",fmt(metrics.participation[i],3))}${metricCard("直相性トップ",fmt(top[0]?.v||0))}</div>
+ <div class="section"><h2>相性上位15</h2>${top.map(x=>`<div class="affRow"><div><span class="clickName" data-node="${x.j}">${esc(names[x.j])}</span><div class="bar"><span style="width:${100*x.v/max}%"></span></div></div><div style="text-align:right">${x.v}</div></div>`).join("")}</div>
+ <div class="section"><h2>どのクラスタへ伸びているか</h2>${clusterList.length?clusterList.map(([c,w])=>{const obj=clusterData.find(x=>x.id===c);return `<div class="clusterRow"><div>${esc(obj?.name||("C"+(c+1)))}</div><div style="text-align:right">${w}</div></div>`}).join(""):`<div class="empty">表示辺なし</div>`}</div>
+ <div class="section"><button id="setPairA" class="secondary">このウマ娘を比較Aに設定</button></div>`;
+ document.querySelectorAll("#nodeDetail [data-node]").forEach(el=>el.onclick=()=>focusNode(+el.dataset.node));$("setPairA").onclick=()=>{$("pairA").value=names[i];switchTab("pair")};
+}
+function nameIndex(q){q=(q||"").trim();let i=names.findIndex(n=>n===q);if(i<0){const m=names.map((n,i)=>({n,i})).filter(x=>x.n.includes(q));if(m.length===1)i=m[0].i}return i}
+function sharedRelations(a,b){const out=[];for(const id of relSets[a])if(relSets[b].has(id))out.push([id,weights.get(id)??1]);return out.sort((x,y)=>y[1]-x[1]||x[0]-y[0])}
+function shortestPath(a,b){
+ const n=names.length,adj=adjacency(currentEdges),dist=Array(n).fill(Infinity),prev=Array(n).fill(-1),used=Array(n).fill(false);dist[a]=0;
+ for(let step=0;step<n;step++){let v=-1,best=Infinity;for(let i=0;i<n;i++)if(!used[i]&&dist[i]<best){best=dist[i];v=i}if(v<0||v===b)break;used[v]=true;for(const [w,aff] of adj[v]){const nd=dist[v]+1/Math.max(aff,.0001);if(nd<dist[w]){dist[w]=nd;prev[w]=v}}}
+ if(!Number.isFinite(dist[b]))return null;const path=[];for(let x=b;x!==-1;x=prev[x]){path.push(x);if(x===a)break}path.reverse();return path[0]===a?path:null;
+}
+function comparePair(){
+ const a=nameIndex($("pairA").value),b=nameIndex($("pairB").value);if(a<0||b<0||a===b){$("pairResult").innerHTML="異なる2人を正しく指定してください。";return}
+ const aff=matrix[a][b],rel=sharedRelations(a,b),path=shortestPath(a,b);
+ $("pairResult").innerHTML=`<div style="font-size:16px;font-weight:700">${esc(names[a])} × ${esc(names[b])}</div><div class="metricGrid" style="margin-top:10px">${metricCard("直接相性",aff)}${metricCard("全組合せ内",percentile(aff).toFixed(1)+" pct")}${metricCard("共通関係数",rel.length)}${metricCard("同一クラスタ",communities[a]===communities[b]?"YES":"NO")}</div>
+ <div class="section"><h2>相性ネットワーク上の強相性経路</h2><div class="path">${path?path.map((i,k)=>`${k?" → ":""}<span>${esc(names[i])}</span>`).join(""):"経路なし"}</div><div class="tiny" style="margin-top:6px">辺コスト = 1 / 相性値。</div></div>
+ <div class="section"><h2>直接相性を構成する共通関係ID</h2><div class="relationTags">${rel.slice(0,80).map(([id,w])=>`<span class="relationTag">#${id} · +${w}</span>`).join("")||"共通IDなし"}</div><div class="tiny" style="margin-top:6px">重み合計 = ${rel.reduce((s,x)=>s+x[1],0)}</div></div>`;
+ setView("affinity");clearGroupState(false);resetAffinityHighlight();if(path){const pathSet=new Set(path),edgeIds=new Set();for(let k=0;k<path.length-1;k++){const x=path[k],y=path[k+1],idx=currentEdges.findIndex(e=>(e.from===x&&e.to===y)||(e.from===y&&e.to===x));if(idx>=0)edgeIds.add(idx)}affinityNodes.update(names.map((_,i)=>({id:i,opacity:pathSet.has(i)?1:.12,borderWidth:(i===a||i===b)?4:1.2,font:pathSet.has(i)?((i===a||i===b)?selectedNodeFont():baseNodeFont()):mutedNodeFont()})));affinityEdges.update(currentEdges.map((e,k)=>({id:k,color:{opacity:edgeIds.has(k)?.95:.03},width:edgeIds.has(k)?4:.4})));affinityNetwork.selectNodes(path);affinityNetwork.fit({nodes:path,animation:true})}
+}
+
+/* fixed graph explanation */
+function showGraphInfo(title,body){
+ const el=$("graphInfo");el.innerHTML=`<div class="title">${title}</div>${body}`;el.classList.add("show");
+}
+function hideGraphInfo(){
+ const el=$("graphInfo");el.classList.remove("show");el.innerHTML="";
+}
+function showAffinityNodeInfo(i){
+ const c=clusterData.find(x=>x.id===communities[i]);
+ showGraphInfo(esc(names[i]),`<div class="meta">${esc(c?.name||"")}</div><div style="margin-top:4px">全体総相性 <span class="strong">${fmt(metrics.total[i])}</span> ・ 表示次数 <span class="strong">${fmt(metrics.degree[i])}</span> ・ 加重次数 <span class="strong">${fmt(metrics.strength[i])}</span></div>`);
+}
+function showAffinityEdgeInfo(edgeId){
+ const e=currentEdges[edgeId];if(!e)return hideGraphInfo();
+ const same=communities[e.from]===communities[e.to];
+ showGraphInfo(`${esc(names[e.from])} × ${esc(names[e.to])}`,`<div>相性値 <span class="strong">${e.weight}</span></div><div class="meta">${same?"同一クラスタ":"クラスタ間接続"}</div>`);
+}
+function showHyperNodeInfo(i){
+ const count=groups.slice(0,HYPER_DISPLAY_LIMIT).filter(g=>g.ids.includes(i)).length;
+ const c=clusterData.find(x=>x.id===communities[i]);
+ showGraphInfo(esc(names[i]),`<div class="meta">${esc(c?.name||"")}</div><div style="margin-top:4px">表示中の高相性グループに <span class="strong">${count}</span> 回登場</div>`);
+}
+function showHyperGroupInfo(index){
+ const g=groups[index];if(!g)return hideGraphInfo();
+ showGraphInfo(`G${index+1} ・ ${g.ids.length}人`,`<div>最低相性 <span class="strong">${g.stat.min}</span> ・ 平均 <span class="strong">${g.stat.avg.toFixed(1)}</span></div><div class="meta" style="margin-top:4px">${g.ids.map(i=>esc(names[i])).join(" ・ ")}</div>`);
+}
+function showHyperEdgeInfo(edgeId){
+ const e=hyperEdges?.get(edgeId);if(!e)return hideGraphInfo();
+ const a=String(e.from),b=String(e.to),gid=a.startsWith("g")?a:b,uid=a.startsWith("u")?a:b;
+ const gi=+gid.slice(1),ui=+uid.slice(1),g=groups[gi];
+ showGraphInfo(`G${gi+1} ↔ ${esc(names[ui])}`,`<div>このウマ娘が G${gi+1} のメンバーであることを表すハイパーエッジです。</div>${g?`<div class="meta">G${gi+1}: 最低 ${g.stat.min} / 平均 ${g.stat.avg.toFixed(1)}</div>`:""}`);
+}
+
+/* interactions */
+function switchTab(name){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));document.querySelectorAll(".tabBody").forEach(x=>x.classList.toggle("active",x.id===`tab-${name}`))}
+function setView(v){
+ activeView=v;hideGraphInfo();document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id===`view-${v}`));document.querySelectorAll(".viewTabs button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));updateViewStats();
+ if(v==="affinity"&&affinityNetwork)setTimeout(()=>affinityNetwork.fit({animation:true}),30);
+ if(v==="hyper"){if(!groups.length)runGroups();else if(hyperNetwork)setTimeout(()=>hyperNetwork.fit({animation:true}),30)}
+ if(v==="chord")requestAnimationFrame(()=>{renderChord();if(selectedGroupIndex!=null)highlightChordGroup(groups[selectedGroupIndex].ids)});
+ if(selectedGroupIndex!=null)setTimeout(()=>applyGroupHighlight(false),60);
+}
+function resetAllHighlights(){
+ selectedChordNode=null;if(affinityNetwork)resetAffinityHighlight();if(hyperNetwork)resetHyperHighlight();resetChordHighlight();$("groupBadge").style.display="none";hideGraphInfo();
+}
+function focusNode(i){
+ if(!Number.isInteger(i)||i<0)return;clearGroupState(false);lastSelected=i;showNode(i);switchTab("node");
+ if(activeView==="affinity"){affinityNetwork.focus(i,{scale:1.45,animation:true});highlightEgo(i,+$("egoDepth").value)}
+ else if(activeView==="hyper"){highlightHyperNode(i);if(hyperNetwork&&hyperNodes.get(`u${i}`))hyperNetwork.focus(`u${i}`,{scale:1.25,animation:true})}
+ else{selectedChordNode=i;highlightChordNode(i,true)}
+}
+function setSearchPopover(open){$("searchPopover").classList.toggle("open",open);$("searchToggle").classList.toggle("active",open);$("searchToggle").setAttribute("aria-expanded",open?"true":"false");if(open)setTimeout(()=>$("search").focus(),0)}
+
+$("topN").oninput=e=>$("topNValue").textContent=e.target.value;
+$("minAffinity").oninput=e=>$("minValue").textContent=e.target.value;
+$("threshold").oninput=e=>$("thresholdValue").textContent=e.target.value;
+$("applyGraph").onclick=rebuild;
+$("showLabels").onchange=renderAffinityNetwork;
+$("sizeMetric").onchange=renderAffinityNetwork;
+$("runGroups").onclick=runGroups;
+$("sort").onchange=()=>{sortGroups();renderGroups();renderHypergraph()};
+$("filter").oninput=renderGroups;
+$("rankMetric").onchange=renderRanking;
+$("compare").onclick=comparePair;
+document.querySelectorAll(".tab").forEach(x=>x.onclick=()=>switchTab(x.dataset.tab));
+document.querySelectorAll(".viewTabs button").forEach(x=>x.onclick=()=>setView(x.dataset.view));
+$("searchToggle").onclick=e=>{e.stopPropagation();setSearchPopover(!$("searchPopover").classList.contains("open"))};
+$("searchPopover").onclick=e=>e.stopPropagation();
+document.addEventListener("click",()=>setSearchPopover(false));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")setSearchPopover(false)});
+$("search").addEventListener("keydown",e=>{if(e.key==="Enter"){const i=nameIndex($("search").value);focusNode(i);if(i>=0)setSearchPopover(false)}});
+$("focus").onclick=()=>{const i=nameIndex($("search").value);focusNode(i);if(i>=0)setSearchPopover(false)};
+$("resetView").onclick=()=>{clearGroupState(true);lastSelected=null;if(activeView==="affinity"&&affinityNetwork)affinityNetwork.fit({animation:true});if(activeView==="hyper"&&hyperNetwork)hyperNetwork.fit({animation:true});setSearchPopover(false)};
+window.addEventListener("resize",()=>{if(activeView==="chord")renderChord()});
+
+(async()=>{
+ try{
+  const text=await fetchText();parseSource(text);computeMatrix();
+  $("nameList").innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
+  $("status").className="status ok";$("status").innerHTML=`読み込み完了：<b>${names.length}人</b>`;
+  rebuild();
+  runGroups(); // 未指定時は右ペインの既定値（25 / 5人）を適用
+ }catch(e){console.error(e);$("status").className="status err";$("status").textContent=`読み込み失敗: ${e.message}`}
+})();
+</script>
+</body>
+</html>
