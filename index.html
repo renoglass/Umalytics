@@ -287,6 +287,35 @@ const ARCHETYPES=[
 ];
 const MAX_CLIQUES=20000, HYPER_DISPLAY_LIMIT=50;
 
+const DEFAULT_AFFINITY_LAYOUT={
+ hash:"c2e1e4b9",
+ positions:{"アイネスフウジン":[-175.6,60.6],"アグネスタキオン":[-365.3,135],"アグネスデジタル":[39.2,-163.5],"アストンマーチャン":[-344.9,-283.3],"アドマイヤグルーヴ":[-261.6,-23.2],"アドマイヤベガ":[300.3,147.4],"アーモンドアイ":[102.8,-146.8],"イクノディクタス":[-286.4,136],"イナリワン":[230.3,181.8],"ウイニングチケット":[44.7,168],"ウインバリアシオン":[45.4,246.1],"ウオッカ":[-127.8,-44.2],"エアグルーヴ":[269.4,-69.5],"エアシャカール":[176.3,221.1],"エアメサイア":[-76.2,-7.2],"エイシンフラッシュ":[-66.8,178.9],"エスポワールシチー":[-155,-313.3],"エピファネイア":[212.2,-186.6],"エルコンドルパサー":[136.3,-263.9],"オグリキャップ":[-77.1,53.8],"オルフェーヴル":[236.5,266],"カツラギエース":[-108.9,286],"カルストンライトオ":[-168.7,-159],"カレンチャン":[-222.7,-287.9],"カレンブーケドール":[277.5,-193.2],"カワカミプリンセス":[-128.6,-111],"キセキ":[72.7,390.2],"キタサンブラック":[67.9,305.8],"キングヘイロー":[-335.3,4.9],"クロノジェネシス":[267.2,-7.8],"グラスワンダー":[-187,-12.3],"グランアレグリア":[-228.7,-171.6],"ケイエスミラクル":[-298.6,-420.2],"コパノリッキー":[-188.9,-227.9],"ゴールドシチー":[-5.8,-314.8],"ゴールドシップ":[100.1,200.2],"サイレンススズカ":[-119.4,158.5],"サウンズオブアース":[-192.1,408.1],"サクラチヨノオー":[8.5,-221.7],"サクラバクシンオー":[-64,-421.2],"サクラローレル":[-20.5,395.8],"サトノクラウン":[-171.1,267],"サトノダイヤモンド":[-153.3,468.4],"シュヴァルグラン":[-174.4,203.9],"シリウスシンボリ":[275.3,-256.6],"シンコウウインディ":[52.9,-290.6],"シンボリクリスエス":[-66.7,116.9],"シンボリルドルフ":[98.5,47.9],"シーキングザパール":[-360.4,-217.2],"シーザリオ":[44.9,90.6],"ジェンティルドンナ":[76.5,-226.2],"ジャングルポケット":[-295,74.3],"スイープトウショウ":[363.4,180.5],"スティルインラブ":[18.9,23.3],"ステイゴールド":[-14,274.7],"スペシャルウィーク":[-117,224.6],"スマートファルコン":[-105.2,-189.3],"スーパークリーク":[156.3,88.1],"セイウンスカイ":[-9.1,202.7],"ゼンノロブロイ":[240.1,-121],"タイキシャトル":[-115.7,-349.5],"タップダンスシチー":[-2,131.5],"タニノギムレット":[154.9,165.1],"タマモクロス":[176.4,292.4],"ダイイチルビー":[-265.4,-249.5],"ダイタクヘリオス":[-110,-469.7],"ダイワスカーレット":[139.8,-195.3],"ダンツフレーム":[340.7,3.5],"ツインターボ":[-55.6,319.6],"ツルマルツヨシ":[405.8,-45.1],"テイエムオペラオー":[105.3,122.5],"デアリングハート":[84.4,-350.6],"デュランダル":[-1.5,-85.7],"トウカイテイオー":[136.8,-24.9],"トランセンド":[-135.8,-408],"トーセンジョーダン":[376,-133.2],"ドゥラメンテ":[124,338.3],"ドリームジャーニー":[307.6,321.1],"ナイスネイチャ":[-212.9,315.5],"ナカヤマフェスタ":[-237.1,175.2],"ナリタタイシン":[351.1,260.5],"ナリタトップロード":[288.7,58.5],"ナリタブライアン":[-60.3,242.1],"ニシノフラワー":[-204.8,-356.7],"ネオユニヴァース":[-241.7,243],"ノースフライト":[74.1,-428.5],"ノーリーズン":[-176.1,136.8],"ハルウララ":[-14.9,-20.8],"バブルガムフェロー":[73,-27.2],"バンブーメモリー":[-253.2,-107.4],"ヒシアケボノ":[-306.4,-338.5],"ヒシアマゾン":[235.8,343.2],"ヒシミラクル":[-79.6,444.4],"ビコーペガサス":[-369.7,-131.3],"ビリーヴ":[-218.2,-451.1],"ビワハヤヒデ":[200.9,129.1],"ファインモーション":[68.6,-87.8],"ファレノプシス":[340.6,-207.4],"フェノーメノ":[288.6,211],"フサイチパンドラ":[207.3,-256.2],"フジキセキ":[4.1,-458.2],"フリオーソ":[22.4,-383.6],"ブエナビスタ":[156.8,30.4],"ホッコータルマエ":[-41.5,-362],"マチカネタンホイザ":[-296.8,310],"マチカネフクキタル":[-303.4,212.9],"マヤノトップガン":[115,263.1],"マルゼンスキー":[-291.7,-175.5],"マンハッタンカフェ":[-143.7,340.8],"マーベラスサンデー":[-225.3,105.1],"ミスターシービー":[176.2,392.8],"ミホノブルボン":[-194.5,-77.6],"メイショウドトウ":[399.4,91.6],"メジロアルダン":[172.9,-136],"メジロドーベル":[-66.3,-81.7],"メジロパーマー":[15.1,334.3],"メジロブライト":[-274.2,411.5],"メジロマックイーン":[254.8,110.1],"メジロライアン":[-95,374.4],"メジロラモーヌ":[157.7,-349.9],"ヤエノムテキ":[197.2,-67.6],"ヤマニンゼファー":[-85.1,-296.7],"ユキノビジン":[247.2,-319.1],"ライスシャワー":[137,-82.5],"ラインクラフト":[-126.8,-253.9],"ラッキーライラック":[204.4,-8.1],"ラヴズオンリーユー":[-19.9,67.2],"ルーラーシップ":[217.6,60.9],"レッドディザイア":[-129.2,97],"ロイスアンドロイス":[330.8,-68.5],"ローズキングダム":[302,-134.6],"ワンダーアキュート":[-54.7,-243.1],"ヴィクトワールピサ":[-129.5,25.9],"ヴィブロス":[-241.7,41],"ヴィルシーナ":[-52.8,-155]}
+};
+
+function fnv1a32(str){
+ let h=0x811c9dc5;
+ for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}
+ return (h>>>0).toString(16).padStart(8,"0");
+}
+function currentAffinityLayoutHash(){
+ const defaults={
+  edgeMode:$("edgeMode").value,
+  topN:+$("topN").value,
+  minAffinity:+$("minAffinity").value
+ };
+ const signature=JSON.stringify({
+  nodes:names,
+  defaults,
+  edges:currentEdges.map(e=>[names[e.from],names[e.to],e.weight])
+ });
+ return fnv1a32(signature);
+}
+function defaultAffinityLayoutState(){
+ const hash=currentAffinityLayoutHash();
+ const complete=hash===DEFAULT_AFFINITY_LAYOUT.hash&&names.every(name=>Array.isArray(DEFAULT_AFFINITY_LAYOUT.positions[name]));
+ return {hash,usePrecomputed:complete};
+}
+
 let names=[],relSets=[],weights=new Map(),matrix=[],totals=[],allPairValues=[];
 let currentEdges=[],communities=[],clusterData=[],metrics={};
 let affinityNetwork=null,affinityNodes=null,affinityEdges=null;
@@ -407,15 +436,21 @@ function renderAffinityNetwork(){
  host.style.opacity="1";
  const sizeKey=$("sizeMetric").value,sizes=scaleValues(metrics[sizeKey]),minV=+$("minAffinity").value;
 
- const nd=names.map((name,i)=>({
-  id:i,
-  label:$("showLabels").checked?name:"",
-  value:sizes[i],
-  group:communities[i],
-  borderWidth:1.2,
-  font:baseNodeFont(),
-  color:baseNodeColor(i)
- }));
+ const layoutState=defaultAffinityLayoutState();
+
+ const nd=names.map((name,i)=>{
+  const p=layoutState.usePrecomputed?DEFAULT_AFFINITY_LAYOUT.positions[name]:null;
+  return {
+   id:i,
+   label:$("showLabels").checked?name:"",
+   value:sizes[i],
+   group:communities[i],
+   borderWidth:1.2,
+   font:baseNodeFont(),
+   color:baseNodeColor(i),
+   ...(p?{x:p[0],y:p[1]}:{})
+  };
+ });
 
  const ed=currentEdges.map((e,k)=>({
   id:k,
@@ -445,17 +480,19 @@ function renderAffinityNetwork(){
    edges:{selectionWidth:2},
    groups:gs,
 
-   // 修正前と同じく vis-network 自身に自然な初期配置を任せる。
-   // 固定 seed にして、再構築時の大きな見た目の揺れだけ抑える。
-   layout:{improvedLayout:true,randomSeed:42},
+   // デフォルト構成では事前計算済みの平衡座標を使う。
+   // ハッシュが一致しない構成では従来どおり vis-network に初期配置を任せる。
+   layout:{improvedLayout:!layoutState.usePrecomputed,randomSeed:42},
 
    physics:{
     enabled:true,
     solver:"barnesHut",
 
-    // 以前の 260 iteration より軽量。
-    // 初期配置が既に良いため、短い緩和だけで十分。
-    stabilization:{enabled:true,iterations:140,updateInterval:35,fit:true},
+    // デフォルト構成は配布済みの平衡座標から開始する。
+    // physics 自体は有効のままなので、ドラッグ後は通常どおり再平衡化する。
+    stabilization:layoutState.usePrecomputed
+     ?{enabled:true,iterations:60,updateInterval:20,fit:true,onlyDynamicEdges:true}
+     :{enabled:true,iterations:140,updateInterval:35,fit:true},
 
     barnesHut:{
      gravitationalConstant:-5800,
@@ -476,6 +513,8 @@ function renderAffinityNetwork(){
    }
   }
  );
+
+ console.info(`[affinity-layout] ${layoutState.usePrecomputed?"precomputed":"generated"} hash=${layoutState.hash}`);
 
  affinityNetwork.once("stabilized",()=>{
   affinityNetwork.fit({animation:false});
